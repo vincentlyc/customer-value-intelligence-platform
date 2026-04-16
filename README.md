@@ -53,6 +53,7 @@ streamlit run src/app.py
 - Sidebar filters: segment and store
 - Segment revenue mix and churn risk distribution charts
 - Customer-level churn prediction lookup by input customer ID
+- Single-customer transaction history module with 3-month churn trend and predicted 3M LTV
 - Top-customer operational table
 - Segment/store summaries for executive drill-down
 

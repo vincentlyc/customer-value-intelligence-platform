@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from src.churn_forecast import build_customer_forecast
 from src.config import DATA_DIR, OUTPUT_DIR
 
 st.set_page_config(page_title="Customer Value Intelligence", layout="wide")
@@ -69,7 +70,13 @@ if lookup_customer_id:
             "Average Order Value",
             f"{customer_txns['amount'].mean():,.1f}" if not customer_txns.empty else "0.0",
         )
-        stats_4.metric("Estimated Churn", f"{target['churn_probability'] * 100:.1f}%")
+        forecast = build_customer_forecast(
+            customer_txns=customer_txns,
+            current_probability=float(target["churn_probability"]),
+            recency_days=float(target["recency_days"]),
+            fallback_aov=float(target["avg_order_value"]),
+        )
+        stats_4.metric("Predicted 3M LTV", f"{forecast.predicted_ltv_3m:,.0f}")
 
         st.dataframe(
             customer_result[
@@ -87,6 +94,8 @@ if lookup_customer_id:
             ],
             use_container_width=True,
         )
+        st.subheader("Next 3 Months Churn Trend")
+        st.line_chart(forecast.churn_curve, x="month_offset", y="churn_probability")
 
         st.subheader("Customer Transaction History")
         if customer_txns.empty:
