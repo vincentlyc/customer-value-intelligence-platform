@@ -1,24 +1,29 @@
 """Render presentation-ready charts from processed outputs."""
 
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from config import DATA_DIR, OUTPUT_DIR
+from src.config import DATA_DIR, OUTPUT_DIR
 
 plt.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "Arial", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
 
-def render_charts() -> None:
+def render_charts(data_dir: Path = DATA_DIR, output_dir: Path = OUTPUT_DIR) -> None:
     """Generate summary charts and write PNG files to outputs directory."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    mart = pd.read_csv(OUTPUT_DIR / "customer_mart.csv")
-    txns = pd.read_csv(DATA_DIR / "transactions.csv", parse_dates=["transaction_date"])
-    campaigns = pd.read_csv(DATA_DIR / "campaigns.csv")
+    mart = pd.read_csv(output_dir / "customer_mart.csv")
+    txns = pd.read_csv(data_dir / "transactions.csv", parse_dates=["transaction_date"])
+    campaigns = pd.read_csv(data_dir / "campaigns.csv")
 
     seg = (
         mart.groupby("segment", as_index=False)["total_revenue"]
@@ -31,7 +36,7 @@ def render_charts() -> None:
     plt.xlabel("Segment")
     plt.ylabel("Revenue")
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "revenue_by_segment.png", dpi=160)
+    plt.savefig(output_dir / "revenue_by_segment.png", dpi=160)
     plt.close()
 
     monthly = (
@@ -46,7 +51,7 @@ def render_charts() -> None:
     plt.ylabel("Revenue")
     plt.xticks(rotation=60)
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "monthly_revenue_trend.png", dpi=160)
+    plt.savefig(output_dir / "monthly_revenue_trend.png", dpi=160)
     plt.close()
 
     plt.figure(figsize=(10, 6))
@@ -55,7 +60,7 @@ def render_charts() -> None:
     plt.xlabel("Total Revenue")
     plt.ylabel("Customer Count")
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "customer_value_distribution.png", dpi=160)
+    plt.savefig(output_dir / "customer_value_distribution.png", dpi=160)
     plt.close()
 
     channel_perf = campaigns.groupby("channel", as_index=False)[
@@ -74,10 +79,24 @@ def render_charts() -> None:
     plt.ylabel("Rate")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "campaign_channel_performance.png", dpi=160)
+    plt.savefig(output_dir / "campaign_channel_performance.png", dpi=160)
     plt.close()
 
 
+def parse_args() -> argparse.Namespace:
+    """Build CLI parser for chart rendering."""
+    parser = argparse.ArgumentParser(description="Render analytics charts from CSV outputs.")
+    parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
+    return parser.parse_args()
+
+
+def main() -> None:
+    """CLI entrypoint for chart rendering."""
+    args = parse_args()
+    render_charts(data_dir=args.data_dir, output_dir=args.output_dir)
+    print(f"Charts generated in {args.output_dir}")
+
+
 if __name__ == "__main__":
-    render_charts()
-    print("Charts generated in ./outputs")
+    main()

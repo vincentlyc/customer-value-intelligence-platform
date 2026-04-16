@@ -2,13 +2,13 @@ install:
 	pip install -r requirements.txt
 
 data:
-	python src/generate_fake_data.py
+	python -m src.generate_fake_data
 
 pipeline:
-	python src/pipeline.py
+	python -m src.pipeline
 
 viz:
-	python src/visualize.py
+	python -m src.visualize
 
 run:
 	streamlit run src/app.py
