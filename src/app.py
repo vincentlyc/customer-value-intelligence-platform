@@ -47,12 +47,42 @@ with right:
     churn_dist = filtered["churn_risk"].value_counts().rename_axis("churn_risk").reset_index(name="customers")
     st.bar_chart(churn_dist, x="churn_risk", y="customers")
 
+st.subheader("Customer Churn Prediction Lookup")
+lookup_customer_id = st.text_input("輸入顧客ID（例如 C00001）", value="").strip().upper()
+if lookup_customer_id:
+    customer_result = mart[mart["customer_id"] == lookup_customer_id]
+    if customer_result.empty:
+        st.warning(f"找不到顧客ID：{lookup_customer_id}")
+    else:
+        target = customer_result.iloc[0]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Predicted Churn Probability", f"{target['churn_probability'] * 100:.1f}%")
+        c2.metric("Churn Risk Level", target["churn_risk"])
+        c3.metric("Segment", target["segment"])
+        st.dataframe(
+            customer_result[
+                [
+                    "customer_id",
+                    "total_revenue",
+                    "frequency",
+                    "recency_days",
+                    "avg_order_value",
+                    "primary_store",
+                    "favorite_channel",
+                    "churn_probability",
+                    "churn_risk",
+                ]
+            ],
+            use_container_width=True,
+        )
+
 st.subheader("Top Customers")
 st.dataframe(
     filtered.sort_values("total_revenue", ascending=False)[
         [
             "customer_id",
             "segment",
+            "churn_probability",
             "churn_risk",
             "total_revenue",
             "frequency",

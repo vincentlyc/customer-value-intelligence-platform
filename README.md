@@ -52,6 +52,7 @@ streamlit run src/app.py
 - KPI cards: customer count, total revenue, average revenue, average recency
 - Sidebar filters: segment and store
 - Segment revenue mix and churn risk distribution charts
+- Customer-level churn prediction lookup by input customer ID
 - Top-customer operational table
 - Segment/store summaries for executive drill-down
 
