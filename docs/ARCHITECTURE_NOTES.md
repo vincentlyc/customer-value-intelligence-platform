@@ -20,3 +20,23 @@ This repository should be presented as a business decision intelligence platform
    - add dbt or orchestration
    - add model serving / scoring API
    - plug into BI tools or agent workflows
+
+## Mermaid architecture diagram
+
+```mermaid
+flowchart LR
+    A["Synthetic Data Generator\ncustomers / transactions / campaigns"] --> B["Pipeline Transformation\nRFM + segment + churn"]
+    B --> C["Analytics Outputs\ncustomer_mart.csv\nsegment_summary.csv\nstore_summary.csv"]
+    C --> D["Visualization Layer\nMatplotlib export PNG"]
+    C --> E["Streamlit Dashboard\nKPI + filters + top customers"]
+
+    E --> F["Business Decisions\nRetention prioritization\nChannel strategy\nStore action plan"]
+    D --> F
+```
+
+## Business capability mapping
+
+- **Segment strategy**: VIP/Loyal/Growth/At Risk segmentation logic with explicit rules.
+- **Retention prioritization**: recency-driven churn risk classes surfaced in dashboard filters.
+- **Channel insight**: campaign open and conversion rates rendered into executive-friendly visuals.
+- **Executive reporting**: charts + tabular summaries suitable for walkthroughs with non-technical stakeholders.

@@ -1,82 +1,98 @@
 # Customer Value Intelligence Platform
 
-A Codex-ready portfolio project designed for **Solution Architect / Business Architect** positioning.
+A portfolio-ready analytics demo positioned for **Solution Architect / Business Architect** interviews.
 
-This pack is built to help Codex directly scaffold, extend, and refine a production-style analytics project with:
+This project demonstrates how customer data can be transformed into practical decisions around:
 
-- business-facing architecture narrative
-- modular Python package
-- synthetic demo data
-- visualization scripts
-- acceptance criteria and implementation prompts
+- segment strategy
+- retention prioritization
+- channel performance
+- executive-facing KPI storytelling
 
-## What this project demonstrates
+## Project structure
 
-This project simulates a customer intelligence platform that helps business teams answer:
-
-- Which customers are high value?
-- Which segments are likely to churn?
-- Which stores or channels contribute most revenue?
-- How should CRM / marketing prioritize interventions?
-
-## Included in this pack
-
-- `prompts/CODEX_BOOTSTRAP_PROMPT.md` — prompt you can paste into Codex
-- `docs/PROJECT_SPEC.md` — project scope and business goals
-- `docs/ACCEPTANCE_CRITERIA.md` — delivery and quality checklist
-- `src/generate_fake_data.py` — synthetic customer / transaction / campaign data generator
-- `src/visualize.py` — chart generation script
-- `src/pipeline.py` — transformation and feature engineering pipeline
-- `src/app.py` — lightweight Streamlit demo app
-- `data/` — pre-generated demo data
-- `outputs/` — pre-rendered chart images
+- `src/generate_fake_data.py` — synthetic customer / transaction / campaign generator
+- `src/pipeline.py` — mart and business summary pipeline
+- `src/visualize.py` — presentation chart renderer
+- `src/app.py` — Streamlit decision dashboard
+- `tests/` — unit tests for generation and pipeline logic
+- `docs/ARCHITECTURE_NOTES.md` — architecture narrative + Mermaid diagram
 
 ## Quick start
 
 ```bash
-pip install -r requirements.txt
-python src/generate_fake_data.py
-python src/pipeline.py
-python src/visualize.py
+make install
+make data
+make pipeline
+make viz
+make run
+```
+
+Or run scripts directly:
+
+```bash
+python -m src.generate_fake_data --customers 2000 --transactions 40000 --seed 42
+python -m src.pipeline --data-dir ./data --output-dir ./outputs
+python -m src.visualize --data-dir ./data --output-dir ./outputs
 streamlit run src/app.py
 ```
 
-## Recommended prompt flow in Codex
+## Codespaces quick start
 
-1. Open `prompts/CODEX_BOOTSTRAP_PROMPT.md`
-2. Ask Codex to inspect the repo and implement missing enhancements
-3. Ask Codex to:
-   - add tests
-   - improve feature engineering
-   - harden CLI interface
-   - extend the dashboard
-   - add architecture diagram as Mermaid
+If you run this in **GitHub Codespaces**:
+
+```bash
+pip install -r requirements.txt
+python -m src.generate_fake_data --customers 1000 --transactions 20000 --seed 42
+python -m src.pipeline --data-dir ./data --output-dir ./outputs
+streamlit run src/app.py --server.address 0.0.0.0 --server.port 8501 --server.headless true
+```
+
+Then open the **Ports** panel and click **Open in Browser** on port `8501`.
+
+## Demo page note
+
+The Streamlit screen shown in your screenshot is the **official DEMO page** for this project: 
+
+- title: `Customer Value Intelligence Demo`
+- filters: `Segment`, `Store`
+- KPI cards: `Customers`, `Revenue`, `Avg Revenue`, `Avg Recency`
+- visual blocks: `Segment Revenue Mix`, `Churn Risk Distribution`
+- operational table: `Top Customers`
+
+Use this page during interview walkthroughs as the executive decision-view UI.
+
+## CLI notes
+
+- `generate_fake_data.py`
+  - `--customers`, `--transactions` require positive integers
+  - `--output-dir` supports custom output location for scenario demos
+- `pipeline.py`
+  - accepts `--data-dir` and `--output-dir` for flexible local runs
+- `visualize.py`
+  - accepts `--data-dir` and `--output-dir` for reproducible chart exports
+
+## Dashboard highlights
+
+- KPI cards: customer count, total revenue, average revenue, average recency
+- Sidebar filters: segment and store
+- Segment revenue mix and churn risk distribution charts
+- Top-customer operational table
+- Segment/store summaries for executive drill-down
+
+## Troubleshooting (Codespaces)
+
+- If `localhost:8501` cannot be opened, use Codespaces **Ports → Open in Browser** URL.
+- If dashboard shows missing CSV errors, run generator + pipeline before launching app.
+- If port is not visible, manually add/forward port `8501`.
 
 ## Architecture positioning
 
 This is intentionally framed as a business-to-technology decision platform, not just an LTV notebook.
 
-### Business layer
-
-- customer value strategy
-- CRM prioritization
-- churn risk visibility
-- growth opportunity identification
-
-### Data layer
-
-- transaction facts
-- customer dimensions
-- campaign responses
-- curated analytics mart
-
-### Application layer
-
-- KPI charts
-- segment analysis
-- business storytelling dashboard
+See [docs/ARCHITECTURE_NOTES.md](docs/ARCHITECTURE_NOTES.md) for the architecture interview script and Mermaid flow diagram.
 
 ## Notes
 
-- Data in `data/` is fully synthetic.
-- The chart scripts use a Microsoft JhengHei-first font fallback in code. If the font is not installed in the environment, matplotlib will fall back automatically.
+- Data in `data/` is fully synthetic and safe for portfolio sharing.
+- The chart scripts use a Microsoft JhengHei-first font fallback in code.
