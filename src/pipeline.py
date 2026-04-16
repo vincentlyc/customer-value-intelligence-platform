@@ -1,36 +1,46 @@
 """Transformation pipeline for customer-level mart and summaries."""
 
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
 import pandas as pd
 
-from config import DATA_DIR, OUTPUT_DIR
+from src.config import DATA_DIR, OUTPUT_DIR
 
 
 def assign_segment(row: pd.Series) -> str:
     """Assign business segment by value, frequency, and recency heuristics."""
-    if row["total_revenue"] >= 25000 and row["frequency"] >= 12:
+    revenue = float(row["total_revenue"])
+    frequency = float(row["frequency"])
+    recency = float(row["recency_days"])
+
+    if revenue >= 25000 and frequency >= 12 and recency <= 60:
         return "VIP"
-    if row["total_revenue"] >= 12000 and row["frequency"] >= 8:
+    if revenue >= 12000 and frequency >= 8 and recency <= 120:
         return "Loyal"
-    if row["recency_days"] > 180 and row["frequency"] <= 3:
+    if recency > 210 and frequency <= 3:
         return "At Risk"
-    if row["frequency"] <= 2:
+    if frequency <= 2 and recency <= 90:
         return "New"
     return "Growth"
 
 
 def churn_risk(row: pd.Series) -> str:
     """Classify churn risk from recency days."""
-    if row["recency_days"] > 240:
+    recency_days = float(row["recency_days"])
+    if recency_days > 240:
         return "High"
-    if row["recency_days"] > 120:
+    if recency_days > 120:
         return "Medium"
     return "Low"
 
 
-def build_customer_mart() -> pd.DataFrame:
+def build_customer_mart(data_dir: Path = DATA_DIR) -> pd.DataFrame:
     """Build customer mart with RFM-style features and labels."""
-    customers = pd.read_csv(DATA_DIR / "customers.csv", parse_dates=["join_date"])
-    txns = pd.read_csv(DATA_DIR / "transactions.csv", parse_dates=["transaction_date"])
+    customers = pd.read_csv(data_dir / "customers.csv", parse_dates=["join_date"])
+    txns = pd.read_csv(data_dir / "transactions.csv", parse_dates=["transaction_date"])
 
     ref_date = txns["transaction_date"].max() + pd.Timedelta(days=1)
 
@@ -76,6 +86,7 @@ def build_summary_tables(mart: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
         customers=("customer_id", "count"),
         total_revenue=("total_revenue", "sum"),
         avg_revenue=("total_revenue", "mean"),
+        avg_recency_days=("recency_days", "mean"),
     )
     store_summary = mart.groupby("primary_store", as_index=False).agg(
         customers=("customer_id", "count"),
@@ -84,16 +95,40 @@ def build_summary_tables(mart: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame
     return segment_summary, store_summary
 
 
-def main() -> None:
-    """CLI entrypoint to run mart + summaries pipeline."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    mart = build_customer_mart()
+def run_pipeline(data_dir: Path = DATA_DIR, output_dir: Path = OUTPUT_DIR) -> None:
+    """Run full pipeline and write all output artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    mart = build_customer_mart(data_dir=data_dir)
     segment_summary, store_summary = build_summary_tables(mart)
 
-    mart.to_csv(OUTPUT_DIR / "customer_mart.csv", index=False)
-    segment_summary.to_csv(OUTPUT_DIR / "segment_summary.csv", index=False)
-    store_summary.to_csv(OUTPUT_DIR / "store_summary.csv", index=False)
-    print("Pipeline completed. Outputs saved to ./outputs")
+    mart.to_csv(output_dir / "customer_mart.csv", index=False)
+    segment_summary.to_csv(output_dir / "segment_summary.csv", index=False)
+    store_summary.to_csv(output_dir / "store_summary.csv", index=False)
+
+
+def parse_args() -> argparse.Namespace:
+    """Build CLI parser for pipeline execution."""
+    parser = argparse.ArgumentParser(description="Build customer intelligence mart outputs.")
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DATA_DIR,
+        help="Input data directory containing customers.csv and transactions.csv.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help="Output directory for mart and summary CSV files.",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    """CLI entrypoint to run mart + summaries pipeline."""
+    args = parse_args()
+    run_pipeline(data_dir=args.data_dir, output_dir=args.output_dir)
+    print(f"Pipeline completed. Outputs saved to {args.output_dir}")
 
 
 if __name__ == "__main__":

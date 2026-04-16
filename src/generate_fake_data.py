@@ -1,28 +1,34 @@
 """Generate synthetic datasets for customer intelligence demo use-cases."""
 
+from __future__ import annotations
+
 import argparse
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from config import DATA_DIR
+from src.config import DATA_DIR
 
 
-def generate_data(
-    n_customers: int = 2000,
-    n_transactions: int = 40000,
-    seed: int = 42,
-) -> None:
-    """Generate synthetic customer, transaction, and campaign datasets."""
-    rng = np.random.default_rng(seed)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+def _positive_int(value: str) -> int:
+    """Argparse validator for positive integers."""
+    int_value = int(value)
+    if int_value <= 0:
+        raise argparse.ArgumentTypeError(f"Value must be a positive integer, got {value}.")
+    return int_value
 
+
+def _build_customers(
+    rng: np.random.Generator,
+    n_customers: int,
+    stores: list[str],
+    channels: list[str],
+    segments: list[str],
+) -> pd.DataFrame:
+    """Create a synthetic customer master table."""
     customer_ids = [f"C{str(i).zfill(5)}" for i in range(1, n_customers + 1)]
-    stores = ["Taipei", "Banqiao", "Taichung", "Tainan", "Kaohsiung", "Hsinchu"]
-    channels = ["App", "Web", "Store", "EDM", "SMS"]
-    segments = ["VIP", "Loyal", "Growth", "At Risk", "New"]
-
-    customer_df = pd.DataFrame(
+    return pd.DataFrame(
         {
             "customer_id": customer_ids,
             "age": rng.integers(20, 66, size=n_customers),
@@ -43,6 +49,15 @@ def generate_data(
         }
     )
 
+
+def _build_transactions(
+    rng: np.random.Generator,
+    n_transactions: int,
+    customer_ids: list[str],
+    stores: list[str],
+    channels: list[str],
+) -> pd.DataFrame:
+    """Create a synthetic transaction fact table with seasonal spend effects."""
     txn_dates = pd.to_datetime("2024-01-01") + pd.to_timedelta(
         rng.integers(0, 730, size=n_transactions), unit="D"
     )
@@ -50,7 +65,7 @@ def generate_data(
     seasonality = np.where(pd.Series(txn_dates).dt.month.isin([6, 11, 12]), 1.18, 1.0)
     amount = np.round(base_amount * seasonality, 2)
 
-    transaction_df = pd.DataFrame(
+    return pd.DataFrame(
         {
             "transaction_id": [f"T{str(i).zfill(7)}" for i in range(1, n_transactions + 1)],
             "customer_id": rng.choice(customer_ids, size=n_transactions),
@@ -78,7 +93,13 @@ def generate_data(
         }
     )
 
-    campaign_df = pd.DataFrame(
+
+def _build_campaigns(
+    rng: np.random.Generator,
+    segments: list[str],
+) -> pd.DataFrame:
+    """Create synthetic campaign response data."""
+    return pd.DataFrame(
         {
             "campaign_id": [f"MKT{str(i).zfill(4)}" for i in range(1, 21)],
             "campaign_name": [f"Campaign_{i}" for i in range(1, 21)],
@@ -91,21 +112,74 @@ def generate_data(
         }
     )
 
-    customer_df.to_csv(DATA_DIR / "customers.csv", index=False)
-    transaction_df.to_csv(DATA_DIR / "transactions.csv", index=False)
-    campaign_df.to_csv(DATA_DIR / "campaigns.csv", index=False)
+
+def generate_data(
+    n_customers: int = 2000,
+    n_transactions: int = 40000,
+    seed: int = 42,
+    output_dir: Path = DATA_DIR,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Generate and persist synthetic customer, transaction, and campaign datasets."""
+    if n_customers <= 0 or n_transactions <= 0:
+        raise ValueError("n_customers and n_transactions must both be positive.")
+
+    rng = np.random.default_rng(seed)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    stores = ["Taipei", "Banqiao", "Taichung", "Tainan", "Kaohsiung", "Hsinchu"]
+    channels = ["App", "Web", "Store", "EDM", "SMS"]
+    segments = ["VIP", "Loyal", "Growth", "At Risk", "New"]
+
+    customer_df = _build_customers(rng, n_customers, stores, channels, segments)
+    transaction_df = _build_transactions(
+        rng,
+        n_transactions,
+        customer_df["customer_id"].tolist(),
+        stores,
+        channels,
+    )
+    campaign_df = _build_campaigns(rng, segments)
+
+    customer_df.to_csv(output_dir / "customers.csv", index=False)
+    transaction_df.to_csv(output_dir / "transactions.csv", index=False)
+    campaign_df.to_csv(output_dir / "campaigns.csv", index=False)
+
+    return customer_df, transaction_df, campaign_df
+
+
+def parse_args() -> argparse.Namespace:
+    """Build CLI parser for synthetic data generation."""
+    parser = argparse.ArgumentParser(
+        description="Generate synthetic customer intelligence demo data.",
+    )
+    parser.add_argument("--customers", type=_positive_int, default=2000)
+    parser.add_argument("--transactions", type=_positive_int, default=40000)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DATA_DIR,
+        help="Output directory for CSV files (default: ./data).",
+    )
+    return parser.parse_args()
 
 
 def main() -> None:
     """CLI entrypoint for synthetic data generation."""
-    parser = argparse.ArgumentParser(description="Generate synthetic demo data.")
-    parser.add_argument("--customers", type=int, default=2000)
-    parser.add_argument("--transactions", type=int, default=40000)
-    parser.add_argument("--seed", type=int, default=42)
-    args = parser.parse_args()
-
-    generate_data(args.customers, args.transactions, args.seed)
-    print("Synthetic data generated in ./data")
+    args = parse_args()
+    customers, transactions, campaigns = generate_data(
+        n_customers=args.customers,
+        n_transactions=args.transactions,
+        seed=args.seed,
+        output_dir=args.output_dir,
+    )
+    print(
+        "Generated datasets:",
+        f"customers={len(customers):,}",
+        f"transactions={len(transactions):,}",
+        f"campaigns={len(campaigns):,}",
+        f"output_dir={args.output_dir}",
+    )
 
 
 if __name__ == "__main__":
