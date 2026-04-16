@@ -37,6 +37,20 @@ def churn_risk(row: pd.Series) -> str:
     return "Low"
 
 
+def churn_probability(row: pd.Series) -> float:
+    """Estimate churn probability from RFM-style signals for demo prediction use."""
+    recency_days = float(row["recency_days"])
+    frequency = float(row["frequency"])
+    total_revenue = float(row["total_revenue"])
+
+    recency_score = min(recency_days / 365.0, 1.0)
+    frequency_score = 1.0 - min(frequency / 20.0, 1.0)
+    revenue_score = 1.0 - min(total_revenue / 30000.0, 1.0)
+
+    score = 0.55 * recency_score + 0.30 * frequency_score + 0.15 * revenue_score
+    return round(float(min(max(score, 0.01), 0.99)), 4)
+
+
 def build_customer_mart(data_dir: Path = DATA_DIR) -> pd.DataFrame:
     """Build customer mart with RFM-style features and labels."""
     customers = pd.read_csv(data_dir / "customers.csv", parse_dates=["join_date"])
@@ -64,6 +78,7 @@ def build_customer_mart(data_dir: Path = DATA_DIR) -> pd.DataFrame:
     )
 
     agg["recency_days"] = (ref_date - agg["last_purchase_date"]).dt.days
+    agg["churn_probability"] = agg.apply(churn_probability, axis=1)
     agg["segment"] = agg.apply(assign_segment, axis=1)
     agg["churn_risk"] = agg.apply(churn_risk, axis=1)
 
@@ -72,6 +87,7 @@ def build_customer_mart(data_dir: Path = DATA_DIR) -> pd.DataFrame:
     mart["frequency"] = mart["frequency"].fillna(0)
     mart["avg_order_value"] = mart["avg_order_value"].fillna(0)
     mart["recency_days"] = mart["recency_days"].fillna(999)
+    mart["churn_probability"] = mart["churn_probability"].fillna(0.99)
     mart["segment"] = mart["segment"].fillna("Dormant")
     mart["churn_risk"] = mart["churn_risk"].fillna("High")
     mart["favorite_channel"] = mart["favorite_channel"].fillna("N/A")

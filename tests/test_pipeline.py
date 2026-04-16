@@ -7,7 +7,13 @@ from pathlib import Path
 import pandas as pd
 
 from src.generate_fake_data import generate_data
-from src.pipeline import assign_segment, build_customer_mart, build_summary_tables, churn_risk
+from src.pipeline import (
+    assign_segment,
+    build_customer_mart,
+    build_summary_tables,
+    churn_probability,
+    churn_risk,
+)
 
 
 def test_assign_segment_vip() -> None:
@@ -23,6 +29,12 @@ def test_assign_segment_at_risk() -> None:
 def test_churn_risk_high() -> None:
     row = pd.Series({"recency_days": 300})
     assert churn_risk(row) == "High"
+
+
+def test_churn_probability_range() -> None:
+    row = pd.Series({"recency_days": 120, "frequency": 4, "total_revenue": 5000})
+    score = churn_probability(row)
+    assert 0.01 <= score <= 0.99
 
 
 def test_generate_data_writes_expected_shapes(tmp_path: Path) -> None:
@@ -47,7 +59,13 @@ def test_build_customer_mart_and_summaries(tmp_path: Path) -> None:
     segment_summary, store_summary = build_summary_tables(mart)
 
     assert len(mart) == 80
-    assert {"segment", "churn_risk", "total_revenue", "recency_days"}.issubset(mart.columns)
+    assert {
+        "segment",
+        "churn_probability",
+        "churn_risk",
+        "total_revenue",
+        "recency_days",
+    }.issubset(mart.columns)
     assert segment_summary["customers"].sum() == 80
     assert store_summary["customers"].sum() == 80
     assert (mart["recency_days"] >= 0).all()
